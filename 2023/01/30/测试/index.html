@@ -1,0 +1,328 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="QingZhou,1203715903@qq.com"><title>spring · 轻舟</title><meta name="description" content="spring循环依赖循环依赖定义一个或多个对象之间存在直接或者间接的依赖关系，这种依赖关系是一个环形调用。
+三级缓存spring内部有三级缓存：
+
+第一级缓存： singletonObjects，用于保存实例化、注入、初始化完成的bean示例
+第二级缓存：earlySingletonObjects,"><meta name="keywords" content="Hexo,HTML,CSS,Java,Note"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"><meta name="generator" content="Hexo 5.4.2"></head><body><div class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/logo@2x.png" style="width:127px;"><h3 title=""><a href="/">轻舟</a></h3><div class="description"><p>走下去，太阳自然会升起.</p></div></div></div><ul class="social-links"><li><a target="_blank" rel="noopener" href="http://github.com/https://github.com/xiaduxiu/xiaduxiu.github.io"><i class="fa fa-github"></i></a></li></ul><div class="footer"><a target="_blank" href="/"><span>Theme by </span></a><a target="_blank" rel="noopener" href="https://www.caicai.me"> CaiCai </a><span>&</span><a target="_blank" rel="noopener" href="https://github.com/Ben02/hexo-theme-Anatole"> Ben</a><div class="by_farbox"><a href="https://hexo.io/zh-cn/" target="_blank">Proudly published with Hexo&#65281;</a></div></div></div><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">首页</a></li><li><a href="/about">关于</a></li><li><a href="/archives">归档</a></li><li><a href="/links">友链</a></li></div><div class="information"><div class="back_btn"><li><a class="fa fa-chevron-left" onclick="window.history.go(-1)"> </a></li></div><div class="avatar"><img src="/images/favicon.png"></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>spring</a></h3></div><div class="post-content"><h1 id="spring循环依赖"><a href="#spring循环依赖" class="headerlink" title="spring循环依赖"></a>spring循环依赖</h1><h2 id="循环依赖定义"><a href="#循环依赖定义" class="headerlink" title="循环依赖定义"></a>循环依赖定义</h2><p>一个或多个对象之间存在直接或者间接的依赖关系，这种依赖关系是一个环形调用。</p>
+<h2 id="三级缓存"><a href="#三级缓存" class="headerlink" title="三级缓存"></a>三级缓存</h2><p>spring内部有三级缓存：</p>
+<ul>
+<li>第一级缓存： singletonObjects，用于保存实例化、注入、初始化完成的bean示例</li>
+<li>第二级缓存：earlySingletonObjects, 用于保存实例化完成的bean示例</li>
+<li>第三级缓存：singletonFactories, 用于保存bean创建工厂，以便后面有机会创建代理对象</li>
+</ul>
+<p><strong>执行逻辑</strong>： </p>
+<p>一级缓存找对象，找不到去二级缓存，再找不到去三级缓存，找到了，获取对象，放到二级缓存，从三级缓存中移除。</p>
+<p><img src="/assets/img/image-20230129102642561.png" alt="图片1"></p>
+<h2 id="原理执行流程"><a href="#原理执行流程" class="headerlink" title="原理执行流程"></a>原理执行流程</h2><p>第一层： 先获取A的bean, 发现没有则去创建，然后找到A的代理工厂放入三级缓存（这时A其实是半成品，还没有对里面的属性进行注入），但是A依赖B的创建，所以先去创建B；</p>
+<p>第二层：准备创建B， 发现B又依赖A，需要先去创建A；</p>
+<p>第三层： 去创建A，因为第一层一级创建A的代理工厂，直接从三级缓存中拿到A的代理工厂，获取A的代理对象，放到二级缓存中，并清除三级缓存；</p>
+<p>回到第二层，现在有了A的代理对象，对A的依赖解决（此时A还是半成品），B初始化成功；</p>
+<p>回到第一层，现在B初始化成功，完成A对象的属性注入，再填充A的其他属性，以及A的其他步骤（包括AOP），完成对A完整的初始化功能（此时A是完整的Bean）；</p>
+<p>将A放入一级缓存。</p>
+<h2 id="源码解读"><a href="#源码解读" class="headerlink" title="源码解读"></a>源码解读</h2><p>refresh方法中的 finishBeanFactoryInitialization(beanFactory)方法： 实例化所有bean工程缓存的bean对象。</p>
+<p>进入 beanFactory.preInstantiateSingletons()方法： 实例化剩下的所有的单例对象。</p>
+<p><strong>第一层</strong>：</p>
+<p> 进入 doGetBean()，从 getSinleton()没有找到对象，</p>
+<p>进入创建bean的逻辑，调用 createBean(beanName, mbd, args)， </p>
+<p>进入doCreateBean() 后，调用 addSingletonFactory(), 往 三级缓存 singletonFactoies塞入工厂对象</p>
+<p>进入 populateBean(), 执行 postPrecessProperties() 这是一个策略模式，使用 AutowiredAnnotationBeanPostProcessor</p>
+<p>进入  metadata.inject(bean, beanName, pvs) , 再进入 element.inject(target, beanName, pvs) ， 进入 resolveFieldValue()对成员对象进行属性注入, </p>
+<p>进入 beanFactory.resolveDependency(), 再进入 doResolveDependency(), 找到 对象A 依赖的对象名 B</p>
+<p>获取B的bean, 进入  resolveCandidate()  ，这是 AbstratBeanFactory的方法 ， 调用 beanFactory.getBean获取到B的bean</p>
+<p><strong>第二层</strong>：</p>
+<p>获取到B的bean，从doGetBean(), 到 doResplveDependency() 和第一层逻辑完全一样，找到 B依赖的对象名A</p>
+<p>进入  resolveCandidate()， 调用 beanFactory.getBean获取到A的bean</p>
+<p><strong>第三层</strong></p>
+<p>获取A的bean，在第一层和第二层中，每次都会从getSingleton()获取对象，但是由于之前没有初始化 A 和 B 的三级缓存，所以获取对象为空。</p>
+<p>进入 doGetBean()， 调用 getSingleton()获取对象，  由于第三级缓存有 A 数据，这里使用三级缓存的工厂，为A创建一个代理对象，塞入二级缓存，将三级缓存的工厂删除。</p>
+<p>此时已经拿到A的代理对象，解决了B的依赖关系，返回到第二层。</p>
+<p><strong>返回第二层</strong></p>
+<p>在doGetBean() 中， 通过 createBean() 创建一个B的bean, 当B的bean创建成功后，会执行  getSingleton() 对B的结果进行处理；</p>
+<p>在getSingleton方法中调用 addSingleton方法， 处理 B的一、二级缓存的逻辑，将二级缓存清除，放入一级缓存</p>
+<p><strong>返回第一层</strong></p>
+<p>A初始化完成后，会将 A的二级缓存清除，将对象放入一级缓存。</p>
+<h2 id="为什么有三级缓存"><a href="#为什么有三级缓存" class="headerlink" title="为什么有三级缓存"></a>为什么有三级缓存</h2><p>一级缓存，singletonObjects, 结构是 Map&lt;String, Object&gt; ，这是一个单例池，将初始化好的对象放到里面，给其他线程使用，如果没有第一级缓存，程序不能保证Spring的单例属性。</p>
+<p>三级缓存， singletonFactories, 结构是 Map&lt;String, ObjectFactory&lt;?&gt;&gt; , Map的Value是一个对象的代理工厂，三级缓存的作用是存放对象代理工厂。</p>
+<p> 对象代理工厂主要是存放半成品的单例Bean, 目的是为了打破循环。</p>
+<p><strong>三级缓存为什么不直接存半成品的A，而是一个代理工厂？</strong></p>
+<p>因为AOP。</p>
+<p>对象工厂是如何得到的？ 在addSingletonFactory方法中调用 AbstractAutoProxyCretor 的 getEarlyBeanReference方法， 再调用 wrapIfNecessary方法，判断bean是否有AOP, 有则创建一个代理对象，无则返回原对象。</p>
+<p>二级缓存： 用来存放对象工厂生成的对象，这个对象可能是原对象，也可能是代理对象。</p>
+<p><strong>能不能去掉二级缓存</strong></p>
+<p>如果 A 需要找 B 和 C，但是 B 需要找 A，C 也需要找 A。</p>
+<p><strong>假如</strong> <strong>A</strong> <strong>需要进⾏</strong> <strong>AOP</strong>，因为代理对象每次都是⽣成不同的对象，如果⼲掉第⼆级缓存，只有第⼀、三级缓存：</p>
+<p>B 找到 A 时，直接通过三级缓存的⼯⼚的代理对象，⽣成对象 A1。</p>
+<p>C 找到 A 时，直接通过三级缓存的⼯⼚的代理对象，⽣成对象 A2。</p>
+<p>通过A的⼯⼚的代理对象，⽣成了两个不同的对象A1和A2，</p>
+<p>所以⼆级缓存的⽬的是为了避免因为AOP创建多个对象，其中存储的是半成品的AOP的单例bean。</p>
+<p>如果没有 AOP 的话，只要 1、3 级缓存，就可以满⾜要求。</p>
+<p>作用</p>
+<p>⼀级缓存：为Spring的单例属性⽽⽣，就是个单例池，⽤来存放已经初始化完成的单例 Bean；</p>
+<p>⼆级缓存：为解决AOP⽽⽣，存放的是半成品的 AOP 的单例 Bean；</p>
+<p>三级缓存：为打破循环⽽⽣，存放的是⽣成半成品单例 Bean 的⼯⼚⽅法</p>
+<h1 id="Bean生命周期"><a href="#Bean生命周期" class="headerlink" title="Bean生命周期"></a>Bean生命周期</h1><h2 id="IOC定义"><a href="#IOC定义" class="headerlink" title="IOC定义"></a>IOC定义</h2><p>控制反转，把创建对象的权利交给容器，由容器控制所有的对象。</p>
+<p>IOC体现了面向对象设计法则-好莱坞法则： 别找我们，我们找你。 由IOC容器帮对象找相应的依赖对象并注入，而不是由对象主动去找。</p>
+<p>控制： 谁控制谁？IOC容器控制对象</p>
+<p>反转： 为何反转？由容器帮我们查找并注入依赖对象，对象只是被动接受依赖对象。 哪些方面反转？依赖对象的获取被反转了。</p>
+<h2 id="Bean生命周期-1"><a href="#Bean生命周期-1" class="headerlink" title="Bean生命周期"></a>Bean生命周期</h2><p>对Prototype Bean来说，当用户getBean获取到 Prototype Bean实例后，IOC容器就不再对当前实例进行管理，而是把管理权交给用户，此后再getBean生成的是新的实例。所以 描述Bean的生命周期，指的是 Singleton Bean。</p>
+<p><img src="/assets/img/image-20230128165927001.png" alt="image-20230128165927001"></p>
+<p>Bean生命周期过程：</p>
+<ul>
+<li>实例化： 实例化一个Bean对象</li>
+<li>属性赋值：为Bean设置相关属性和依赖</li>
+<li>初始化：5、6 步是真正的初始化，第 3、4 步为在初始化前执⾏，第 7 步在初始化后执⾏，初始化完成之后，Bean 就可以被使⽤了</li>
+<li>销毁： 第 8~10 步，第 8 步其实也可以算到销毁阶段，但不是真正意义上的销毁，⽽是先在使⽤前注册了销毁的相关调⽤接⼝，为了后⾯第 9、10 步真正销毁 Bean 时再执⾏相应的⽅法。</li>
+</ul>
+<h2 id="执行流程"><a href="#执行流程" class="headerlink" title="执行流程"></a>执行流程</h2><ul>
+<li>调用构造方法: 出生了</li>
+<li>设置属性： 名字叫小夏</li>
+<li>BeanNameAware#setBeanName： 要上学了，学名叫 夏夏</li>
+<li>BeanFactoryAware#setBeanFactory： 选好学校了</li>
+<li>BeanPostProcessor.postProcessBeforeInitialization： 到学校报名了</li>
+<li>InitializingBean#afterPropertiesSet：入学登记</li>
+<li>自定义init： 努力上学ing</li>
+<li>BeanPostProcessor#postProcessAfterInitialization: 毕业，拿到毕业证了</li>
+<li>Bean使用中： 工作，</li>
+<li>DisposableBean#destory： 人生落幕</li>
+<li>自定义destory方法： 长眠于此</li>
+</ul>
+<h2 id="扩展方法"><a href="#扩展方法" class="headerlink" title="扩展方法"></a>扩展方法</h2><ul>
+<li>Aware接口：让Bean能拿到容器的一些资源，例如 BeanNameAware的setBeanName, BeanFactoryAware的 setBeanFactory</li>
+<li>后处理器：进行一些前置和后置的处理， 例如 BeanPostProcessor的 postProcessBeforeInitialization , postProcessAfterInitialization</li>
+<li>生命周期接口：定义初始化方法和销毁方法， 例如 InitializingBean的 afterPropertiesSet, DisposableBean 的 destory</li>
+<li>配置生命周期方法： 通过配置文件，自定义初始化和销毁方法，例如配置文件配置的init 和 destoryMethod</li>
+</ul>
+<h2 id="源码解读-1"><a href="#源码解读-1" class="headerlink" title="源码解读"></a>源码解读</h2><p>进入 doGetBean()，从 getSingleton() 没有找到对象，进⼊创建 Bean 的逻辑</p>
+<p><strong>实例化</strong></p>
+<p>进⼊ doCreateBean() 后，调⽤ createBeanInstance()，调⽤ instantiateBean()， 调用 getInstantiationStrategy.instantiate()， 调用 BeanUtils.instantiateClass(), 调用 newInstance(), 实例化 Bean.</p>
+<p> <strong>属性赋值</strong></p>
+<p>回到 doCreateBean() ，进入 populateBean()【此方法是依赖注入的逻辑】, 执行 applyPropertyValues(),  后执行 bw.setPropertyValues(), 进入 processLocalProperty()，执行 ph.setValue()，调用 writeMethod.invoke，进入 Bean的方法，给Bean赋值name。</p>
+<p><strong>初始化</strong></p>
+<p>回到 doCreateBean()， 执行 initializeBean(),  </p>
+<p>进入 invokeAwareMethods, 调用 setBeanName, 会进入Bean的 setBeanName(),  设置BeanName, </p>
+<p>回到invokeAwareMethods, 调用 setBeanFactory, 会进入Bean的 setBeanFacroty, 设置 BeanFacroty</p>
+<p>第一次回到 initializeBean， 进入 applyBeanPostProcessorsBeforeInitialization, 找到 MyBeanPostProceeor的策略方法，执行自定义的前置处理方法</p>
+<p>第二次回到 initializeBean，进入 invokeInitMethods, 调用 afterPropertiesSet, 会进入Bean的 afterPropertiesSet</p>
+<p>回到 invokeInitMethods， 继续执行 invokeCustomInitMethod, 调用 methodToInvoke.invoke, 进入 Bean的 init()</p>
+<p>第三次回到 initializeBean， 进入 applyBeanPostProcessorsAfterInitialization, 找到 MyBeanPostProceeor的策略方法，执行自定义的后置处理方法.</p>
+<p><strong>销毁</strong></p>
+<p>destory方法，调用 close方法， 执行 doClose(), </p>
+<p>进入doClose(), 调用 destoryBeans(), 调用 getBeanFactory.destorySingletons(),  </p>
+<p>调用 destoryBean(), 调用 bean.destory(), 会进入到 Bean, 调用 destory()</p>
+<p>再执行 invokeCustomDestoryMethod, 调用 destoryMethod.invoke， 会进入到 Bean, 调用 destoryMethod()</p>
+<p><strong>重要方法</strong></p>
+<ul>
+<li><p>doCreateBean()：这个是⼊⼝；</p>
+</li>
+<li><p>createBeanInstance()：⽤来初始化 Bean，⾥⾯会调⽤对象的构造⽅法；</p>
+</li>
+<li><p>populateBean()：属性对象的依赖注⼊，以及成员变量初始化；</p>
+</li>
+<li><p>initializeBean()：⾥⾯有 4 个⽅法，</p>
+</li>
+</ul>
+<p>​        先执⾏ aware 的 BeanNameAware、BeanFactoryAware 接⼝；</p>
+<p>​        再执⾏ BeanPostProcessor 前置接⼝；</p>
+<p>​        然后执⾏ InitializingBean 接⼝，以及配置的 init()；</p>
+<p>​        最后执⾏ BeanPostProcessor 的后置接⼝。</p>
+<ul>
+<li>destory()：先执⾏ DisposableBean 接⼝，再执⾏配置的 destroyMethod()。</li>
+</ul>
+<h1 id="Spring-AOP"><a href="#Spring-AOP" class="headerlink" title="Spring AOP"></a>Spring AOP</h1><p>aop定义</p>
+<p>aspect oriented programming 面向切面编程，在AOP的思想里面，周边功能（日志、事务管理、性能统计）被定义为切面，核心功能和切面功能单独开放，把 核心功能 和切面功能编织在一起，这就是AOP。</p>
+<p>AOP 将与业务无关，却为业务模块所共同调用的逻辑封装起来，便于减少系统的重复代码，降低模块间的耦合度，并有利于未来的可扩展性和可维护性。</p>
+<p>连接点(Join point)：能够被拦截的地⽅，Spring AOP 是基于动态代理的，所以是⽅法拦截的，每个成员⽅法都可以称之为连接点；</p>
+<p>切点(Poincut)：每个⽅法都可以称之为连接点，我们具体定位到某⼀个⽅法就成为切点；</p>
+<p>通知(Advice)：表示添加到切点的逻辑代码并定位连接点的⽅位信息，简单来说就定义了是⼲什么的，具体是在哪⼲；</p>
+<p>织⼊(Weaving)：将增强/通知添加到⽬标类的具体连接点上的过程；</p>
+<p>引介(Introduction)：允许我们向现有的类添加新⽅法或属性，是⼀种特殊的增强；</p>
+<p>切⾯(Aspect)：切⾯由切点和增强/通知组成，它既包括了横切逻辑的定义、也包括了连接点的定义。</p>
+<p>切⼊点Pointcut：在哪些类，哪些⽅法上切⼊（<strong>where</strong>）；</p>
+<p>通知Advice：在⽅法执⾏的什么时机when， 做什么what：增强的功能；</p>
+<p>切⾯（Aspect）：切⾯ = 切⼊点 + 通知，通俗点就是在什么时机，什么地⽅，做什么增强；</p>
+<p>织⼊（Weaving）：把切⾯加⼊到对象，并创建出代理对象的过程，这个由 Spring 来完成。</p>
+<p>5 种通知的分类：</p>
+<p>前置通知(Before Advice)：在⽬标⽅法被调⽤前调⽤通知功能；</p>
+<p>后置通知(After Advice)：在⽬标⽅法被调⽤之后调⽤通知功能；</p>
+<p>返回通知(After-returning)：在⽬标⽅法成功执⾏之后调⽤通知功能；</p>
+<p>异常通知(After-throwing)：在⽬标⽅法抛出异常之后调⽤通知功能；</p>
+<p>环绕通知(Around)：把整个⽬标⽅法包裹起来，在被调⽤前和调⽤之后分别调⽤通知功能。</p>
+<h2 id="工作流程"><a href="#工作流程" class="headerlink" title="工作流程"></a>工作流程</h2><p><img src="/assets/img/image-20230128180630653.png" alt="image-20230128180630653"></p>
+<p>分为三块：</p>
+<ul>
+<li><p>前置处理，在创建 Louzai Bean 的前置处理中，遍历程序所有的切⾯信息，将切⾯信息保存在缓存中。</p>
+</li>
+<li><p>后置处理，在创建Bean的后置处理器中</p>
+<ul>
+<li><p>获取 Bean的切⾯⽅法：从缓存中拿到所有的切⾯信息，和 Bean 的所有⽅法进⾏匹配，然后找到</p>
+<p>Bean 所有需要进⾏ AOP 的⽅法。</p>
+</li>
+<li><p>创建AOP代理对象**：结合 Bean 需要进⾏ AOP 的⽅法，选择 Cglib 或 JDK，创建 AOP 代理对象。</p>
+</li>
+</ul>
+</li>
+<li><p>执行切面， 通过 责任链+递归的方式，去执行切面</p>
+</li>
+</ul>
+<h2 id="源码解读-2"><a href="#源码解读-2" class="headerlink" title="源码解读"></a>源码解读</h2><p>在doGetBean()，进⼊创建 Bean 的逻辑，进入 createBean(),</p>
+<p><strong>前置处理</strong></p>
+<p> 前置入口 ： resolveBeforeInstantiation(),  调用 applyBeanPostProcessorsBeforeInstantiation()  进行前置处理， </p>
+<p>进入方法 postProcessBeforeInstantiation() ，进入 shouldSkip(), 进入findCandidateAdvisors() 获取切面信息，</p>
+<p>进入buildAspectJAdvisors()， </p>
+<pre><code>1. 遍历所有的类， 
+1. 判断是否切面，调用 isAspect(), 调用 hasAspectAnnotation，是否有Aspect注解
+1. 获取每个Aspect的切面列表 getAdvisors()。getAdvisor() 生成切面信息
+1. 保存Aspect的切面列表到缓存advisorsCache中。
+</code></pre>
+<p><strong>后置处理</strong></p>
+<p>从缓存拿切面，和bean的方法匹配，并创建 AOP代理对象。</p>
+<p>后置入口 ： doCreateBean(), 进入 initializeBean(), 调用 applyBeanPostProcessorsAfterInitialization 进行后置处理</p>
+<p>进入方法 postProcessBeforeInstantiation() ，进入 wrapIfNecessary()，</p>
+<ul>
+<li>获取到bean类的所有切面列表， getAdvicesAndAdvisorsForBean()</li>
+<li>创建一个AOP的代理对象., createProxy(), 调用 createAopProxy().getProxy(), 这里有两种创建代理对象的方式<ul>
+<li>Cglib创建代理对象</li>
+<li>通过JDK动态代理创建代理对象</li>
+</ul>
+</li>
+</ul>
+<p><strong>切面执行</strong></p>
+<p>拿到 AOP代理对象执行调用 service 的方法。</p>
+<p>设计思路：采⽤递归 + 责任链的模式；</p>
+<p>递归：反复执⾏ CglibMethodInvocation 的 proceed()；</p>
+<p>退出递归条件：interceptorsAndDynamicMethodMatchers 数组中的对象，全部执⾏完毕；</p>
+<p>责任链：有一个对象数组，每次取其中⼀个数组对象，然后去执⾏对象的invoke（）。</p>
+<p>第一次递归：数组第一个对象是 ExposeInvocationInterceptor执行invoke(),啥也没干，继续执行 CglibMethodInvocation 的 proceed()。</p>
+<p>第二次递归：数组第二个对象是 MethodBeforeAdviceInterceptor执行invoke(),会执行到自定义的前置通知方法。</p>
+<p>第三次递归：数组第三个对象是AfterReturningAdviceInterceptor执行invoke()，退出递归 invokeJoinpoint()。</p>
+<p>invokeJoinpoint() 执行主方法，也就是 service切面的方法。</p>
+<p>执行完成后，第四次递归，会执行到自定义的后置通知方法。</p>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>切面执行的责任链模式并不纯粹。 纯粹的责任链模式，对象内部有一个自身的next对象，执行完当前对象的方法末尾，就会启动next对象的执行，直到最后一个next对象执行完毕，或者途中因为某些条件中断执行，责任链才会退出。</p>
+<p>而这里的 CglibMethodInvocation对象内部没有next对象，全程通过 interceptorsAndDynamicMethodMatchers的数组控制，依次去执行数组中的对象，直到最后一个对象执行完毕，责任链才会退出。</p>
+<p>主对象是 CglibMethodInvocation, 继承于 ReflectiveMethodInvocation， 然后 process的核心逻辑，其实都是在 ReflectiveMethodInvacation中。</p>
+<p>ReflectiveMethodInvocation 的 process() 控制整个责任链的执行。所有数组的对象都继承MethodInterceptor接口。</p>
+<p>然后每次执行invoke()时，里面都会去执行 CglibMethodInvocation的process()。</p>
+<p><strong>对象和方法的关系</strong>：</p>
+<ul>
+<li>接口继承： 数组中的对象都继承MethodInterceptor接口，实现里面的invoke方法</li>
+<li>类继承： 主对象CglibMethodInvocation，继承于ReflectiveMethodInvocation， 复用它的 process()方法</li>
+<li>两者结合（策略模式）： invoke的入参，就是CglibMethodInvocation，执行invoke时，内部会执行CglibMethodInvocation.process()</li>
+</ul>
+<p><strong>执行逻辑</strong></p>
+<p>程序⼊⼝：是 CglibMethodInvocation 的 process() ⽅法；</p>
+<p>链式执⾏（衍⽣的责任链模式）：process() 中有个包含 3 个对象的数组，依次去执⾏每个对象的 invoke() 。</p>
+<p>递归（逻辑回退）：invoke() ⽅法会执⾏切⾯逻辑，同时也会执⾏ CglibMethodInvocation 的 process() ⽅法，让逻辑再⼀次进⼊ process()。</p>
+<p>递归退出：当数组中的对象全部执⾏完毕，流程结束。</p>
+<p>所以这⾥设计巧妙的地⽅，是因为纯粹责任链模式，⾥⾯的 next 对象，需要保证⾥⾯的对象类型完全相同。但是数组⾥⾯的对象，⾥⾯没有 next 成员对象，所以不能直接⽤责任链模式，那怎么办呢？就单独搞了⼀个CglibMethodInvocation.process()，通过去⽆限递归 process()，来实现责任链的逻辑。</p>
+<h1 id="Spring事务"><a href="#Spring事务" class="headerlink" title="Spring事务"></a>Spring事务</h1><h2 id="工作流程-1"><a href="#工作流程-1" class="headerlink" title="工作流程"></a>工作流程</h2><p>spring事务源码分为两块，</p>
+<p><img src="/assets/img/image-20230128205806835.png" alt="image-20230128205806835"></p>
+<p>入口是 refresh(), 执行 doCreateBean().</p>
+<p><strong>第一部分： 后置处理</strong>，</p>
+<p>在创建 Bean 的后置处理器中，会做两件事： </p>
+<ol>
+<li>获取Bean的切面方法：首先会拿到所有的切面信息，和 Bean的所有方法进行匹配，然后找到Bean所有需要进行事务处理的方法，匹配成功的方法，还需要将事务属性保存到缓存 attributeCache中</li>
+<li>创建AOP代理对象：结合Bean需要进行AOP的方法，选择Cglib或JDK，创建AOP代理对象</li>
+</ol>
+<p><strong>第二部分：事务执行</strong></p>
+<p><img src="C:\Users\xia\AppData\Roaming\Typora\typora-user-images\image-20230128210230989.png" alt="image-20230128210230989"></p>
+<p>从缓存中拿到事务属性、创建并开启事务、执行业务逻辑、提交或回滚事务。</p>
+<h2 id="源码解读-3"><a href="#源码解读-3" class="headerlink" title="源码解读"></a>源码解读</h2><p>进⼊ doGetBean()，进⼊创建 Bean 的逻辑。 进⼊ createBean()，调⽤ doCreateBean()。进⼊ doCreateBean()，调⽤ initializeBean()。</p>
+<p>进入 initializeBean(), 调用 applyBeanPostProcessorsAfterInitialization() ，调用 wrapIfNecessary()。</p>
+<p>wrapIfNecessary() 是用来创建代理对象， 同时也是入口。</p>
+<p><strong>创建代理对象</strong></p>
+<ul>
+<li><p>先获取bean类的所有切面列表， 进⼊ canApply()，开始匹配 bean 的切⾯, 遍历所有的方法，进行匹配，</p>
+<p>getTransactionAttribute() 获取事务属性， 调用 parseTransactionAnnotation获取 element对象中的 @Transactional注解，得到事务属性，匹配成功， 会把事务的属性配置信息放入attributeCache缓存。</p>
+</li>
+<li><p>创建一个AOP的代理对象，createProxy().</p>
+</li>
+</ul>
+<p><strong>事务执行</strong></p>
+<p>回到业务逻辑，通过 bean的aop代理对象，执行主方法，因为代理对象是Cglib方式创建，所有通过 intercept()执行。</p>
+<p>new CglibMethodInvocation 调用 proceed()方法，执行 invokeWithinTransaction方法。</p>
+<p>invokeWithinTransaction是事务执行的核心逻辑。</p>
+<ol>
+<li>获取事务属性， getTransactionAttribute 从 attributeCache获取事务的缓存数据</li>
+<li>创建事务， createTransactionIfNecessary() 中 先获取 事务状态（ getTransaction()）, 再将事务状态和事务属性等信息封装成一个TransactionInfo对象。</li>
+<li>获取事务 doGetTransaction() , 创建数据源事务对象（new DataSourceTransactionObject ）, 是否允许当前事务设置保持点（setSavepointAllowed），TransactionSynchronizationManager 事务同步管理器对象(该类中都是局部线程变量)⽤来保存当前事务的信息,第⼀次从这⾥去线程变量中获取 事务连接持有器对象 通过数据源为key去获取。</li>
+<li>开启事务 startTranscation() , 调用 doBegin()【 强制装化事务对象， 判断事务对象没有数据库连接持有器，通过数据源获取一个数据库连接对象，把数据库连接包装成ConnectionHolder对象，设置到事务对象中，标记当前的连接是一个同步事务，为事务设置隔离级别，关闭自动提交，判断事务只读，设置事务激活，设置事务超时时间， 绑定数据源和连接到同步管理器上，把数据源作为key,数据库连接作为value, 设置到线程变量中， 释放数据库连接】</li>
+<li>执行业务逻辑 proceedWithInvocation() –&gt;proceed() –&gt;invokeJoinpoint() –&gt;invoke()</li>
+<li>回滚事务 complateTransactionAfterTrowing ,  getTransactionManager().rollback()执行回滚逻辑， rollbackOn() , 如果抛出的异常类型和事务定义的异常类型匹配，证明该异常需要捕获，事务进行回滚。</li>
+</ol>
+<h1 id="Spring-IOC"><a href="#Spring-IOC" class="headerlink" title="Spring IOC"></a>Spring IOC</h1><h2 id="IOC定义-1"><a href="#IOC定义-1" class="headerlink" title="IOC定义"></a>IOC定义</h2><p>IOC不是一种技术而是一种思想，直到设计松耦合的程序。</p>
+<p>传统应用由类内部主动创建依赖对象，导致类和类之间高耦合，而IOC容器被创建和查找依赖对象的控制权交给容器，由容器进行注入组合对象，所以对象和对象之间是松散耦合，便于功能复用，结构更灵活。</p>
+<p>IOC容器控制对象，控制了外部资源获取。</p>
+<p>容器帮我们查找和注入依赖对象，对象只是被动接受依赖对象，所以是反转，依赖对象的获取反转了。</p>
+<h2 id="容器创建过程"><a href="#容器创建过程" class="headerlink" title="容器创建过程"></a>容器创建过程</h2><p>Spring IOC 是存储、定制、管理等功能的各种定制化的bean对象容器。</p>
+<p><img src="/assets/img/image-20230128222114195.png" alt="image-20230128222114195"></p>
+<h2 id="相关对象"><a href="#相关对象" class="headerlink" title="相关对象"></a>相关对象</h2><ul>
+<li><p>ApplicationContext</p>
+<p>ApplicationContext接口是BeanFactory的子接口，也被称为 spring上下文，和 BeanFactory一样，可以加载配置文件中定义的bean，并进行管理。 还加强了其他功能，如从属性文件中解析文本信息和将时间传递给所有指定的监视器。</p>
+<p><img src="/assets/img/image-20230128222552943.png" alt="image-20230128222552943"></p>
+</li>
+</ul>
+<p>​        ApplicationContext 接⼝主要的 5 个作⽤如表所示：</p>
+<p><img src="/assets/img/image-20230128222612350.png" alt="image-20230128222612350"></p>
+<ul>
+<li><p>BeanDefinitionReader</p>
+<p>配置文件解析器，如将配置文件中bean信息解析成对应的BeanDefinition对象。</p>
+<p>xml文件解析使用的是 BeanDefinitionReader实现类XmlBeanDefinitionReader。</p>
+</li>
+<li><p>BeanFactoryPostProcessor</p>
+<p>可以修改spring上下文中 BeanDefinition 信息。如 BeanFactoryPostProcessor的子类 PropertySourcesPlaceholderConfigurer的作用可以为数据库连接池${}占位符赋值</p>
+</li>
+<li><p>BeanFactory</p>
+<p>所有bean容器的根接口，定义了容器的基本方法， 如 getBean() 通过 类、对象名、类+对象、对象名+对象获取bean 对象， getType 获取类型， containsBean 是否有此类， isSingleton 是否为单例等等</p>
+</li>
+</ul>
+<h2 id="核心流程"><a href="#核心流程" class="headerlink" title="核心流程"></a>核心流程</h2><p>容器初始化的核心代码都在 refersh()中。</p>
+<p><img src="/assets/img/image-20230128223437716.png" alt="image-20230128223437716"></p>
+<h2 id="源码解析"><a href="#源码解析" class="headerlink" title="源码解析"></a>源码解析</h2><p><strong>prepareRefresh()</strong> </p>
+<p>准备刷新上下文环境。 </p>
+<p>initPropertySources() 初始化上下文环境；</p>
+<p>getEnvironment().validateRequiredProperties() 校验我们容器启动必须依赖的环境变量的值</p>
+<p>earlyApplicationListeners 创建⼀个早期事件监听器对象， 并加入到 applicationListeners 中</p>
+<p> this.earlyApplicationEvents = new LinkedHashSet&lt;&gt;() 创建容器⽤于保存早期待发布的事件集合（事件监听器还没有注册到事件多播器上的时候都称为早期事件）</p>
+<p><strong>ConfigurableListableBeanFactory()</strong></p>
+<p>获取初始化的Bean的工厂。</p>
+<p>refreshBeanFactory() : 由于BeanFactory只能刷新⼀次，多线程情况下可能导致线程安全问题，所有使⽤cas原⼦操作来保证</p>
+<p> this.beanFactory.setSerializationId(getId()) 指定Bean⼯⼚的序列化Id</p>
+<p>返回之前容器准备⼯作的时候创建的的bean⼯⼚也就是DefaultListableBeanFactory</p>
+<p><strong>prepareBeanFactory()</strong></p>
+<p>对 Bean ⼯⼚进⾏填充属性.</p>
+<p> beanFactory.setBeanClassLoader(getClassLoader()) 设置bean⼯⼚的类加载器为当前application应⽤上下⽂的加载器</p>
+<p> beanFactory.setBeanExpressionResolver(newStandardBeanExpressionResolver(beanFactory.getBeanClassLoader())); ⼯⼚设置SPEL表达式解析器对象</p>
+<p> beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this,getEnvironment())); bean⼯⼚设置了⼀个propertyEditor属性资源编辑器对象(⽤于后⾯的给bean对象赋值使⽤)</p>
+<p> beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this)); 注册ApplicationContextAwareProcessor后置处理器⽤来处理ApplicationContextAware接⼝的回调⽅法</p>
+<p>ignoreDependencyInterface  当Spring将ApplicationContextAwareProcessor注册后，那么在invokeAwarelnterfaces⽅法中调⽤的Aware类已经不是普通的bean了, 如ResourceLoaderAware、ApplicationEventPublisherAware、ApplicationContextAware等，那么当然需要在Spring做bean的依赖注⼊的时候忽略它们。</p>
+<p>registerResolvableDependency 注册了依赖解析，例如当注册BeanFactory.class的解析依赖后，当bean的属性注⼊的时候，⼀旦检测到属性为BeanFactory类型便会将beanFactory的实例注⼊进去。</p>
+<p>beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this)); 注册了⼀个事件监听器探测器后置处理器接⼝</p>
+<p> <strong>postProcessBeanFactory()</strong></p>
+<p>Spring 开放接⼝留给⼦类去实现该接⼝，主要⽤来改变 BeanFactory。</p>
+<p>如给 BeanFactory 添加⾃⼰的 BeanPostProcessor（Bean的后置处理器）</p>
+<p> <strong>invokeBeanFactoryPostProcessors()</strong></p>
+<p>调⽤bean ⼯⼚的后置处理器</p>
+<p> <strong>registerBeanPostProcessors()</strong></p>
+<p>注册 bean 后置处理器</p>
+<p>先去容器中获取所有的BeanPostProcessor的bean名称， 再 按照BeanPostProcessor实现的优先级接⼝来分离我们的后置处理器</p>
+<p>把实现了priorityOrdered注册到容器中， 处理实现Ordered的bean后置处理器， 排序并且注册我们实现了Order接⼝的后置处理器，</p>
+<p> 实例化我们所有的⾮排序接⼝的， 注册我们普通的没有实现任何排序接⼝的， 注册MergedBeanDefinitionPostProcessor类型的后置处理器，注册ApplicationListenerDetector应⽤监听器探测器的后置处理器</p>
+<p><strong>initApplicationEventMulticaster()</strong></p>
+<p>初始化事件多播器， 从bean⼯⼚中获取或者直接显示的new⼀个事件多播器赋值给applicatoinContext对象的applicationEventMulticaster属性。事件多播器采⽤典型的设计模式就是观察者模式 多播器作为的是⼀个被观察者。</p>
+<p> <strong>onRefresh()</strong></p>
+<p>留个⼦类实现，其中 Spring Boot 就是从这个⽅法进⾏ tomcat 的启动。</p>
+<p><strong>registerListeners()</strong></p>
+<p>把事件监听器注册到事件多播器上</p>
+<p>先获取容器中所有的监听器对象， 把监听器挨个的注册到我们的事件多播器上去</p>
+<p>获取bean定义中的监听器对象， 把监听器的名称注册到我们的事件多播器上</p>
+<p>获取我们的早期事件，通过多播器进⾏播发早期事件</p>
+<p>如何发布事件，通过事件多播器⽅法：multicastEvent()</p>
+<p><strong>finishBeanFactoryInitialization()</strong></p>
+<p>实例化所有的⾮懒加载的单实例 bean</p>
+<p><strong>finishRefresh()</strong></p>
+<p>最后刷新容器发布刷新事件（Spring cloud eureka 也是从这⾥启动的）</p>
+<ol>
+<li>初始化⽣命周期处理器：initLifecycleProcessor() ⽅法。 先获取beanFactory⼯⼚，判断容器中是否有lifecycleProcessor，有就直接从容器中拿，没有创建⼀个DefaultLifecycleProcessor，然后注册到容器中</li>
+<li>调⽤⽣命周期处理器的 getLifecycleProcessor().onRefresh() ⽅法，其中调用的是startBeans(true) ⽅法，主要的功能是找到 Spring 容器的 Lifecycle 类型的 Bean，然后调⽤ start() 去启动。</li>
+<li>发布 ContextRefreshedEvent 事件：主要就是调⽤事件多播器的发布事件⽅法。</li>
+</ol>
+</div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2023-01-30</span><i class="fa fa-tag"></i><a class="tag" href="/categories/Java/" title="Java">Java </a><a class="tag" href="/tags/Java/" title="Java">Java </a><a class="tag" href="/tags/Spring/" title="Spring">Spring </a></div></div></div></div><div class="share"><div class="evernote"><a class="fa fa-bookmark" href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank"></a></div><div class="weibo"><a class="fa fa-weibo" href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));"></a></div><div class="twitter"><a class="fa fa-twitter" target="_blank" rel="noopener" href="http://twitter.com/home?status=,http://example.com/2023/01/30/测试/,轻舟,spring,;"></a></div></div><div class="pagination"><ul class="clearfix"><li class="next pagbuttons"><a class="btn" role="navigation" href="/2023/01/29/hello-world/" title="Hello World">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>

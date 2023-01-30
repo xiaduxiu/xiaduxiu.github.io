@@ -11,7 +11,7 @@
 </ul>
 <p><strong>执行逻辑</strong>： </p>
 <p>一级缓存找对象，找不到去二级缓存，再找不到去三级缓存，找到了，获取对象，放到二级缓存，从三级缓存中移除。</p>
-<p><img src="C:\Users\xia\AppData\Roaming\Typora\typora-user-images\image-20230129102642561.png" alt="image-20230129102642561"></p>
+<p><img src="/assets/img/image-20230129102642561.png" alt="image-20230129102642561"></p>
 <h2 id="原理执行流程"><a href="#原理执行流程" class="headerlink" title="原理执行流程"></a>原理执行流程</h2><p>第一层： 先获取A的bean, 发现没有则去创建，然后找到A的代理工厂放入三级缓存（这时A其实是半成品，还没有对里面的属性进行注入），但是A依赖B的创建，所以先去创建B；</p>
 <p>第二层：准备创建B， 发现B又依赖A，需要先去创建A；</p>
 <p>第三层： 去创建A，因为第一层一级创建A的代理工厂，直接从三级缓存中拿到A的代理工厂，获取A的代理对象，放到二级缓存中，并清除三级缓存；</p>
@@ -64,7 +64,7 @@
 <p>控制： 谁控制谁？IOC容器控制对象</p>
 <p>反转： 为何反转？由容器帮我们查找并注入依赖对象，对象只是被动接受依赖对象。 哪些方面反转？依赖对象的获取被反转了。</p>
 <h2 id="Bean生命周期-1"><a href="#Bean生命周期-1" class="headerlink" title="Bean生命周期"></a>Bean生命周期</h2><p>对Prototype Bean来说，当用户getBean获取到 Prototype Bean实例后，IOC容器就不再对当前实例进行管理，而是把管理权交给用户，此后再getBean生成的是新的实例。所以 描述Bean的生命周期，指的是 Singleton Bean。</p>
-<p><img src="C:\Users\xia\AppData\Roaming\Typora\typora-user-images\image-20230128165927001.png" alt="image-20230128165927001"></p>
+<p><img src="/assets/img/image-20230128165927001.png" alt="image-20230128165927001"></p>
 <p>Bean生命周期过程：</p>
 <ul>
 <li>实例化： 实例化一个Bean对象</li>
@@ -146,7 +146,7 @@
 <p>返回通知(After-returning)：在⽬标⽅法成功执⾏之后调⽤通知功能；</p>
 <p>异常通知(After-throwing)：在⽬标⽅法抛出异常之后调⽤通知功能；</p>
 <p>环绕通知(Around)：把整个⽬标⽅法包裹起来，在被调⽤前和调⽤之后分别调⽤通知功能。</p>
-<h2 id="工作流程"><a href="#工作流程" class="headerlink" title="工作流程"></a>工作流程</h2><p><img src="C:\Users\xia\AppData\Roaming\Typora\typora-user-images\image-20230128180630653.png" alt="image-20230128180630653"></p>
+<h2 id="工作流程"><a href="#工作流程" class="headerlink" title="工作流程"></a>工作流程</h2><p><img src="/assets/img/image-20230128180630653.png" alt="image-20230128180630653"></p>
 <p>分为三块：</p>
 <ul>
 <li><p>前置处理，在创建 Louzai Bean 的前置处理中，遍历程序所有的切⾯信息，将切⾯信息保存在缓存中。</p>
@@ -214,7 +214,7 @@
 <p>递归退出：当数组中的对象全部执⾏完毕，流程结束。</p>
 <p>所以这⾥设计巧妙的地⽅，是因为纯粹责任链模式，⾥⾯的 next 对象，需要保证⾥⾯的对象类型完全相同。但是数组⾥⾯的对象，⾥⾯没有 next 成员对象，所以不能直接⽤责任链模式，那怎么办呢？就单独搞了⼀个CglibMethodInvocation.process()，通过去⽆限递归 process()，来实现责任链的逻辑。</p>
 <h1 id="Spring事务"><a href="#Spring事务" class="headerlink" title="Spring事务"></a>Spring事务</h1><h2 id="工作流程-1"><a href="#工作流程-1" class="headerlink" title="工作流程"></a>工作流程</h2><p>spring事务源码分为两块，</p>
-<p><img src="C:\Users\xia\AppData\Roaming\Typora\typora-user-images\image-20230128205806835.png" alt="image-20230128205806835"></p>
+<p><img src="/assets/img/image-20230128205806835.png" alt="image-20230128205806835"></p>
 <p>入口是 refresh(), 执行 doCreateBean().</p>
 <p><strong>第一部分： 后置处理</strong>，</p>
 <p>在创建 Bean 的后置处理器中，会做两件事： </p>
@@ -253,15 +253,15 @@
 <p>IOC容器控制对象，控制了外部资源获取。</p>
 <p>容器帮我们查找和注入依赖对象，对象只是被动接受依赖对象，所以是反转，依赖对象的获取反转了。</p>
 <h2 id="容器创建过程"><a href="#容器创建过程" class="headerlink" title="容器创建过程"></a>容器创建过程</h2><p>Spring IOC 是存储、定制、管理等功能的各种定制化的bean对象容器。</p>
-<p><img src="C:\Users\xia\AppData\Roaming\Typora\typora-user-images\image-20230128222114195.png" alt="image-20230128222114195"></p>
+<p><img src="/assets/img/image-20230128222114195.png" alt="image-20230128222114195"></p>
 <h2 id="相关对象"><a href="#相关对象" class="headerlink" title="相关对象"></a>相关对象</h2><ul>
 <li><p>ApplicationContext</p>
 <p>ApplicationContext接口是BeanFactory的子接口，也被称为 spring上下文，和 BeanFactory一样，可以加载配置文件中定义的bean，并进行管理。 还加强了其他功能，如从属性文件中解析文本信息和将时间传递给所有指定的监视器。</p>
-<p><img src="C:\Users\xia\AppData\Roaming\Typora\typora-user-images\image-20230128222552943.png" alt="image-20230128222552943"></p>
+<p><img src="/assets/img/image-20230128222552943.png" alt="image-20230128222552943"></p>
 </li>
 </ul>
 <p>​        ApplicationContext 接⼝主要的 5 个作⽤如表所示：</p>
-<p><img src="C:\Users\xia\AppData\Roaming\Typora\typora-user-images\image-20230128222612350.png" alt="image-20230128222612350"></p>
+<p><img src="/assets/img/image-20230128222612350.png" alt="image-20230128222612350"></p>
 <ul>
 <li><p>BeanDefinitionReader</p>
 <p>配置文件解析器，如将配置文件中bean信息解析成对应的BeanDefinition对象。</p>
@@ -275,7 +275,7 @@
 </li>
 </ul>
 <h2 id="核心流程"><a href="#核心流程" class="headerlink" title="核心流程"></a>核心流程</h2><p>容器初始化的核心代码都在 refersh()中。</p>
-<p><img src="C:\Users\xia\AppData\Roaming\Typora\typora-user-images\image-20230128223437716.png" alt="image-20230128223437716"></p>
+<p><img src="/assets/img/image-20230128223437716.png" alt="image-20230128223437716"></p>
 <h2 id="源码解析"><a href="#源码解析" class="headerlink" title="源码解析"></a>源码解析</h2><p><strong>prepareRefresh()</strong> </p>
 <p>准备刷新上下文环境。 </p>
 <p>initPropertySources() 初始化上下文环境；</p>
@@ -325,4 +325,4 @@
 <li>调⽤⽣命周期处理器的 getLifecycleProcessor().onRefresh() ⽅法，其中调用的是startBeans(true) ⽅法，主要的功能是找到 Spring 容器的 Lifecycle 类型的 Bean，然后调⽤ start() 去启动。</li>
 <li>发布 ContextRefreshedEvent 事件：主要就是调⽤事件多播器的发布事件⽅法。</li>
 </ol>
-</div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2023-01-30</span><i class="fa fa-tag"></i><a class="tag" href="/categories/Java/" title="Java">Java </a><a class="tag" href="/tags/Java/" title="Java">Java </a><a class="tag" href="/tags/Spring/" title="Spring">Spring </a></div></div></div></div><div class="share"><div class="evernote"><a class="fa fa-bookmark" href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank"></a></div><div class="weibo"><a class="fa fa-weibo" href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));"></a></div><div class="twitter"><a class="fa fa-twitter" target="_blank" rel="noopener" href="http://twitter.com/home?status=,http://example.com/2023/01/30/测试/,轻舟,spring,;"></a></div></div><div class="pagination"><ul class="clearfix"><li class="next pagbuttons"><a class="btn" role="navigation" href="/2023/01/29/hello-world/" title="Hello World">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>
+</div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2023-01-30</span><i class="fa fa-tag"></i><a class="tag" href="/categories/Java/" title="Java">Java </a><a class="tag" href="/tags/Java/" title="Java">Java </a><a class="tag" href="/tags/Spring/" title="Spring">Spring </a></div></div></div></div><div class="share"><div class="evernote"><a class="fa fa-bookmark" href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank"></a></div><div class="weibo"><a class="fa fa-weibo" href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));"></a></div><div class="twitter"><a class="fa fa-twitter" target="_blank" rel="noopener" href="http://twitter.com/home?status=,http://example.com/2023/01/30/spring/,轻舟,spring,;"></a></div></div><div class="pagination"><ul class="clearfix"><li class="next pagbuttons"><a class="btn" role="navigation" href="/2023/01/29/hello-world/" title="Hello World">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>

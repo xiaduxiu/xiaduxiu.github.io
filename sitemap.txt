@@ -1,3 +1,5 @@
+http://example.com/2023/01/31/%E5%89%91%E6%8C%87offer05-06/
+http://example.com/2023/01/31/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E5%9F%BA%E7%A1%80%E7%AF%87/
 http://example.com/about/index.html
 http://example.com/2023/01/30/%E5%89%91%E6%8C%87offer/
 http://example.com/2023/01/30/spring/
@@ -8,5 +10,7 @@ http://example.com/tags/Java/
 http://example.com/tags/Spring/
 http://example.com/tags/%E7%AE%97%E6%B3%95/
 http://example.com/tags/%E5%89%91%E6%8C%87/
+http://example.com/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C/
 http://example.com/categories/Java/
 http://example.com/categories/%E7%AE%97%E6%B3%95/
+http://example.com/categories/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C/
